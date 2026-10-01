@@ -1,0 +1,10 @@
+target/
+*.log
+.git/
+.gitignore
+README*.md
+run.bat
+start.ps1
+app.err
+app.out
+app.pid
