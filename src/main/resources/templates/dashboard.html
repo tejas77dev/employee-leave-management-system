@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow" th:text="${year} + ' season'">2026 season</p>
+                    <h1 th:text="'Hello, ' + ${me.firstName()}">Hello</h1>
+                </div>
+                <a class="btn-primary" style="width:auto;margin:0" th:href="@{/requests/new}">Request leave</a>
+            </header>
+
+            <div th:if="${error}" class="alert-error" role="alert" th:text="${error}"></div>
+
+            <section class="grid grid-4" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Total remaining</div>
+                    <div class="stat-value" data-testid="total-remaining" th:text="${fmt.days(totalRemaining)} + ' d'">0 d</div>
+                </div>
+                <div class="stat" th:if="${isHr}">
+                    <div class="stat-label">Awaiting approval</div>
+                    <div class="stat-value" th:text="${pendingCount}">0</div>
+                </div>
+                <div class="stat" th:if="${isHr}">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value" th:text="${approvedCount}">0</div>
+                </div>
+                <div class="stat" th:if="${isHr}">
+                    <div class="stat-label">Off today</div>
+                    <div class="stat-value" th:text="${#lists.size(offToday)}">0</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 th:text="${year} + ' balances'">Balances</h2>
+                <div th:if="${#lists.isEmpty(balances)}" class="empty">No active leave types are configured yet.</div>
+                <div th:unless="${#lists.isEmpty(balances)}" class="grid grid-3">
+                    <div th:each="balance : ${balances}"
+                         class="stat"
+                         data-testid="balance-tile"
+                         th:attr="data-leave-type=${balance.leaveType.name}">
+                        <div class="spread">
+                            <span class="stat-label" th:text="${balance.leaveType.name}">Casual Leave</span>
+                            <span class="tnum" th:text="${fmt.days(balance.remaining())} + ' left'">0 left</span>
+                        </div>
+                        <!-- th:classappend takes a bare expression, not a
+                             ${...} literal, so the tone is chosen inline.
+                             Rose means spent; amber means something is
+                             reserved and the remaining figure is low. -->
+                        <div class="meter"
+                             th:classappend="${fmt.meterTone(balance)}"
+                             role="progressbar"
+                             th:attr="aria-valuenow=${fmt.percent(balance.entitled(), balance.used(), balance.pending())}">
+                            <span th:style="'width:' + ${fmt.percent(balance.entitled(), balance.used(), balance.pending())} + '%'"></span>
+                        </div>
+                        <dl class="dl">
+                            <div>
+                                <dt>Entitled</dt>
+                                <dd th:text="${fmt.days(balance.entitled())}">0</dd>
+                            </div>
+                            <div>
+                                <dt>Used</dt>
+                                <dd th:text="${fmt.days(balance.used())}">0</dd>
+                            </div>
+                            <div>
+                                <dt>Pending</dt>
+                                <dd th:text="${fmt.days(balance.pending())}">0</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+            </section>
+
+            <section th:if="${isHr}" class="grid grid-2">
+                <div class="card">
+                    <h2>Awaiting your approval</h2>
+                    <div class="stat-value" th:text="${pendingCount}">0</div>
+                    <a th:href="@{/admin/requests}">Review the queue</a>
+                </div>
+                <div class="card">
+                    <h2>Off today</h2>
+                    <div th:if="${#lists.isEmpty(offToday)}" class="empty">Nobody is off today.</div>
+                    <ul th:unless="${#lists.isEmpty(offToday)}" class="stack" style="list-style:none;padding:0;margin:0">
+                        <li th:each="request : ${offToday}">
+                            <span th:text="${request.user.name}">Name</span>
+                            <span class="muted" th:text="' — ' + ${request.leaveType.name}">— type</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Recent requests</h2>
+                <div th:if="${#lists.isEmpty(recent)}" class="empty">You have not requested any leave yet.</div>
+                <div th:unless="${#lists.isEmpty(recent)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="request : ${recent}">
+                            <td th:text="${request.leaveType.name}">Type</td>
+                            <td th:text="${fmt.requestRange(request)}">Dates</td>
+                            <td class="tnum" th:text="${fmt.days(request.days)}">0</td>
+                            <td>
+                                <span th:classappend="${fmt.statusClass(request.status)}"
+                                      th:text="${fmt.status(request.status)}">Pending</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IDE ###
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+
+### Local config ###
+application-local.properties
+.env
+
+### Local development scratch ###
+cp.txt
+app.pid
+app.out
+app.err
+
+# Local helper scripts for running and smoke-testing the app. Useful to anyone
+# working on this, but not part of the application itself.
+smoke.ps1
+restart.ps1

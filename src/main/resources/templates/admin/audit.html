@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Activity</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <h1>Activity</h1>
+            </header>
+
+            <section class="grid grid-3" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Matching events</div>
+                    <div class="stat-value" th:text="${total}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Last 7 days</div>
+                    <div class="stat-value" th:text="${recentCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Distinct actors</div>
+                    <div class="stat-value" th:text="${#lists.size(actors)}">0</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <form method="get" th:action="@{/admin/audit}" class="filters">
+                    <div>
+                        <label class="label" for="action">Action</label>
+                        <select class="field" id="action" name="action">
+                            <option value="">All</option>
+                            <option th:each="value : ${actions}" th:value="${value}" th:text="${value.label()}"
+                                    th:selected="${action != null and action == value}">Action</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}" placeholder="Summary or actor">
+                    </div>
+                    <button class="btn-secondary" type="submit">Apply</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/admin/audit}">Reset</a>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(entries)}" class="empty">No activity matches those filters.</div>
+                <ol th:unless="${#lists.isEmpty(entries)}" style="list-style:none;padding:0;margin:0">
+                    <li th:each="entry : ${entries}" class="activity-entry" data-testid="activity-entry">
+                        <div class="spread">
+                            <span class="badge badge-muted" th:text="${entry.action.label()}">Action</span>
+                            <span class="muted" style="font-size:12px"
+                                  th:text="${fmt.timestamp(entry.createdAt)}">When</span>
+                        </div>
+                        <div th:text="${entry.summary}" style="margin-top:4px">Summary</div>
+                        <div class="muted" style="font-size:12px;margin-top:2px">
+                            <span th:text="${entry.actorName}">Actor</span>
+                            <span th:text="' · ' + ${entry.entityType} + '/' + ${fmt.shortId(entry.entityId)}"> · type/id</span>
+                        </div>
+                        <div th:if="${entry.metadata}" style="margin-top:6px">
+                            <span th:each="chip : ${fmt.metadataChips(entry.metadata)}"
+                                  class="meta-chip" th:text="${chip}">key = value</span>
+                        </div>
+                    </li>
+                </ol>
+                <p th:if="${#lists.size(entries) == pageSize}" class="hint">
+                    Showing the most recent events. Narrow the filters to see older ones.
+                </p>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

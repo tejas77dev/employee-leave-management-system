@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Approvals</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <h1>Approvals</h1>
+            </header>
+
+            <div th:if="${param.error}" class="alert-error" data-testid="form-error" role="alert"
+                 th:text="${param.error}"></div>
+            <div th:if="${param.logout}" class="alert-success" role="status">You have been signed out.</div>
+
+            <section class="grid grid-3" aria-label="Counts">
+                <div class="stat">
+                    <div class="stat-label">Awaiting decision</div>
+                    <div class="stat-value" th:text="${pendingCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value" th:text="${approvedCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value" th:text="${rejectedCount}">0</div>
+                </div>
+            </section>
+
+            <!-- Filters are a plain GET form, so the view lives in the URL and
+                 stays shareable and survives a reload. -->
+            <section class="card">
+                <form method="get" th:action="@{/admin/requests}" class="filters">
+                    <div>
+                        <label class="label" for="status">Status</label>
+                        <select class="field" id="status" name="status">
+                            <option value="">All</option>
+                            <option th:each="value : ${T(com.company.leavemanager.domain.RequestStatus).values()}"
+                                    th:value="${value}" th:text="${fmt.status(value)}"
+                                    th:selected="${status != null and status == value}">Status</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label" for="type">Leave type</label>
+                        <select class="field" id="type" name="type">
+                            <option value="">All</option>
+                            <option th:each="leaveType : ${leaveTypes}"
+                                    th:value="${leaveType.id}" th:text="${leaveType.name}"
+                                    th:selected="${type != null and type == leaveType.id}">Type</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}" placeholder="Name or email">
+                    </div>
+                    <button class="btn-secondary" type="submit">Apply</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/admin/requests}">Reset</a>
+                </form>
+            </section>
+
+            <section th:if="${showPending}" class="card">
+                <h2>Awaiting decision (<span th:text="${#lists.size(pending)}">0</span>)</h2>
+                <div th:if="${#lists.isEmpty(pending)}" class="empty">No pending requests match those filters.</div>
+                <div th:unless="${#lists.isEmpty(pending)}" class="stack">
+                    <div th:each="request : ${pending}" class="card" style="box-shadow:none;margin:0"
+                         data-testid="pending-card">
+                        <div class="spread">
+                            <div>
+                                <strong th:text="${request.user.name}">Name</strong>
+                                <span class="muted" th:text="' — ' + ${request.leaveType.name}">— type</span>
+                            </div>
+                            <span th:classappend="${fmt.statusClass(request.status)}"
+                                  th:text="${fmt.status(request.status)}">Pending</span>
+                        </div>
+                        <div class="row" style="margin-top:6px">
+                            <span th:text="${fmt.requestRange(request)}">Dates</span>
+                            <span class="tnum" th:text="${fmt.days(request.days)} + ' day(s)'">0 day(s)</span>
+                        </div>
+                        <div th:if="${request.reason}" class="note" style="margin-top:6px"
+                             th:text="'&ldquo;' + ${request.reason} + '&rdquo;'">reason</div>
+
+                        <!-- HR cannot review their own request, so the controls
+                             are replaced with a note rather than shown as a
+                             failure when pressed. -->
+                        <div th:if="${request.user.id == me.id()}" class="alert-info" style="margin:10px 0 0">
+                            This is your own request, so you cannot review it.
+                        </div>
+                        <form th:unless="${request.user.id == me.id()}"
+                              th:action="@{/admin/requests/review}" method="post"
+                              style="margin-top:10px;max-width:380px">
+                            <input type="hidden" name="requestId" th:value="${request.id}">
+                            <label class="label" for="note-${request.id}">Note (optional)</label>
+                            <input class="field" id="note-${request.id}" name="reviewNote" maxlength="500"
+                                   placeholder="Optional note">
+                            <div class="row" style="margin-top:10px">
+                                <button class="btn-approve btn-sm" type="submit" name="decision" value="APPROVED">Approve</button>
+                                <button class="btn-reject btn-sm" type="submit" name="decision" value="REJECTED">Reject</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section th:if="${showDecided}" class="card">
+                <h2>Recent decisions</h2>
+                <div th:if="${#lists.isEmpty(decided)}" class="empty">No decisions match those filters.</div>
+                <div th:unless="${#lists.isEmpty(decided)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th>Reviewer</th>
+                            <th>Decided</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="request : ${decided}" data-testid="decided-row">
+                            <td th:text="${request.user.name}">Employee</td>
+                            <td th:text="${request.leaveType.name}">Type</td>
+                            <td th:text="${fmt.requestRange(request)}">Dates</td>
+                            <td class="tnum" th:text="${fmt.days(request.days)}">0</td>
+                            <td>
+                                <span th:classappend="${fmt.statusClass(request.status)}"
+                                      th:text="${fmt.status(request.status)}">Approved</span>
+                            </td>
+                            <td th:text="${request.reviewedBy != null} ? ${request.reviewedBy.name} : '—'">—</td>
+                            <td th:text="${fmt.timestamp(request.reviewedAt)}">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

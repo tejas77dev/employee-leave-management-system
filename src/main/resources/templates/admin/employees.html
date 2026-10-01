@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Employees</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <h1>Employees</h1>
+            </header>
+
+            <div th:if="${param.error}" class="alert-error" data-testid="form-error" role="alert"
+                 th:text="${param.error}"></div>
+
+            <section class="card">
+                <details>
+                    <summary><strong>Add employee</strong></summary>
+                    <form th:action="@{/admin/employees/create}" method="post" style="margin-top:14px;max-width:420px">
+                        <label class="label" for="new-name">Name</label>
+                        <input class="field" type="text" id="new-name" name="name" maxlength="120" required>
+
+                        <label class="label" for="new-email">Email</label>
+                        <input class="field" type="email" id="new-email" name="email" required>
+
+                        <label class="label" for="new-password">Password</label>
+                        <input class="field" type="text" id="new-password" name="password" minlength="8" required>
+                        <p class="hint">At least 8 characters.</p>
+
+                        <label class="label" for="new-role">Role</label>
+                        <select class="field" id="new-role" name="role">
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="HR">HR</option>
+                        </select>
+
+                        <button class="btn-primary" type="submit">Add employee</button>
+                    </form>
+                </details>
+            </section>
+
+            <section class="card">
+                <form method="get" th:action="@{/admin/employees}" class="filters">
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}" placeholder="Name or email">
+                    </div>
+                    <button class="btn-secondary" type="submit">Apply</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/admin/employees}">Reset</a>
+                </form>
+                <p class="hint" aria-live="polite"
+                   th:text="'Showing ' + ${#lists.size(employees)} + ' of ' + ${totalAccounts} + ' accounts'"></p>
+            </section>
+
+            <section th:if="${#lists.isEmpty(employees)}" class="card">
+                <div class="empty">No employees match that search.</div>
+            </section>
+
+            <section th:unless="${#lists.isEmpty(employees)}" class="stack">
+                <div th:each="employee : ${employees}" class="card" style="margin:0" data-testid="employee-card">
+                    <div class="spread">
+                        <div>
+                            <strong th:text="${employee.name}">Name</strong>
+                            <span class="muted" th:text="' — ' + ${employee.email}">— email</span>
+                            <span class="badge badge-hr" style="margin-left:6px"
+                                  th:if="${employee.role.name() == 'HR'}">HR</span>
+                            <span class="badge badge-muted" style="margin-left:6px"
+                                  th:unless="${employee.active}">Deactivated</span>
+                        </div>
+                        <span class="muted" th:text="${requestCounts[employee.id]} + ' request(s)'">0</span>
+                    </div>
+
+                    <form th:action="@{/admin/employees/update}" method="post">
+                        <input type="hidden" name="userId" th:value="${employee.id}">
+
+                        <label class="label" for="name-${employee.id}">Name</label>
+                        <input class="field" type="text" id="name-${employee.id}" name="name" maxlength="120"
+                               th:value="${employee.name}">
+
+                        <label class="label" for="role-${employee.id}">Role</label>
+                        <select class="field" id="role-${employee.id}" name="role"
+                                th:disabled="${employee.id == isSelf}">
+                            <option value="EMPLOYEE" th:selected="${employee.role.name() == 'EMPLOYEE'}">Employee</option>
+                            <option value="HR" th:selected="${employee.role.name() == 'HR'}">HR</option>
+                        </select>
+
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="active-${employee.id}" name="active" value="true"
+                                   th:checked="${employee.active}" th:disabled="${employee.id == isSelf}">
+                            <label for="active-${employee.id}" th:text="${employee.id == isSelf}
+                                ? 'Active (you cannot deactivate yourself)' : 'Active'">Active</label>
+                        </div>
+
+                        <button class="btn-secondary btn-sm" type="submit">Save</button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

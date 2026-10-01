@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<!-- Sidebar shown on every authenticated page. -->
+<aside th:fragment="sidebar" class="sidebar">
+    <a th:href="@{/dashboard}" class="brand">
+        <span class="brand-mark" aria-hidden="true">LM</span>
+        <span>Leave Manager</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+        <!-- th:classappend evaluates a bare expression, so the whole ternary sits
+             inside one pair of ${...} delimiters. -->
+        <a th:href="@{/dashboard}" th:classappend="${currentPath == '/dashboard' ? 'active' : ''}">Dashboard</a>
+        <a th:href="@{/requests}" th:classappend="${currentPath.startsWith('/requests') ? 'active' : ''}">My leave</a>
+        <a th:href="@{/requests/new}" th:classappend="${currentPath == '/requests/new' ? 'active' : ''}">Request leave</a>
+
+        <div th:if="${#authorization.expression('hasRole(''HR'')')}" class="nav-section">
+            <span class="nav-heading">Administration</span>
+            <a th:href="@{/admin/requests}" th:classappend="${currentPath.startsWith('/admin/requests') ? 'active' : ''}">Approvals</a>
+            <a th:href="@{/admin/employees}" th:classappend="${currentPath == '/admin/employees' ? 'active' : ''}">Employees</a>
+            <a th:href="@{/admin/leave-types}" th:classappend="${currentPath == '/admin/leave-types' ? 'active' : ''}">Leave types</a>
+            <a th:href="@{/admin/balances}" th:classappend="${currentPath == '/admin/balances' ? 'active' : ''}">Balances</a>
+            <a th:href="@{/admin/audit}" th:classappend="${currentPath == '/admin/audit' ? 'active' : ''}">Activity</a>
+        </div>
+    </nav>
+
+    <div class="user-chip">
+        <span class="avatar" th:text="${me.initials()}">?</span>
+        <div class="user-meta">
+            <span class="user-name" th:text="${me.name()}">Signed in</span>
+            <span class="user-role" th:text="${me.role() == T(com.company.leavemanager.domain.Role).HR} ? 'HR' : 'Employee'">Role</span>
+        </div>
+    </div>
+
+    <form th:action="@{/logout}" method="post" class="logout-form">
+        <button type="submit" class="btn-ghost">Sign out</button>
+    </form>
+</aside>
+
+<!-- Alert banners, shown when a redirect carries a message. -->
+<div th:fragment="alert(message, kind)" th:if="${message}"
+     th:classappend="${kind == 'error' ? 'alert-error' : 'alert-success'}"
+     th:text="${message}" role="alert"></div>
+
+</html>

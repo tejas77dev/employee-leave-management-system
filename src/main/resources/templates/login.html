@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="login-body">
+
+<div class="login-grid">
+    <section class="login-brand">
+        <span class="brand-mark" aria-hidden="true">LM</span>
+        <h1>Time off, without the paperwork.</h1>
+        <ul>
+            <li>Weekends are never deducted</li>
+            <li>Half-days supported (0.5 day)</li>
+            <li>Pending days are reserved instantly</li>
+        </ul>
+        <p class="muted">Accounts are created by your HR administrator.</p>
+    </section>
+
+    <section class="login-form-side">
+        <h2>Sign in</h2>
+
+        <div th:if="${loggedOut}" class="alert-success" role="status">You have been signed out.</div>
+        <div th:if="${error}" class="alert-error" data-testid="form-error" role="alert" th:text="${error}"></div>
+
+        <form th:action="@{/login}" method="post">
+            <label class="label" for="email">Email</label>
+            <input class="field" type="email" id="email" name="email" autocomplete="email" autofocus required>
+
+            <label class="label" for="password">Password</label>
+            <input class="field" type="password" id="password" name="password" autocomplete="current-password" required>
+
+            <button class="btn-primary" type="submit">Sign in</button>
+        </form>
+    </section>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Balances</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow" th:text="${year}">2026</p>
+                    <h1>Balances</h1>
+                </div>
+            </header>
+
+            <div th:if="${param.error}" class="alert-error" data-testid="form-error" role="alert"
+                 th:text="${param.error}"></div>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(leaveTypes) or #lists.isEmpty(employees)}" class="empty">
+                    Balances appear once leave types and employees exist.
+                </div>
+                <div th:unless="${#lists.isEmpty(leaveTypes) or #lists.isEmpty(employees)}" class="table-wrap">
+                    <table style="min-width:720px">
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th th:each="leaveType : ${leaveTypes}" th:text="${leaveType.name}">Type</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="employee : ${employees}">
+                            <td th:text="${employee.name}">Employee</td>
+                            <td th:each="leaveType : ${leaveTypes}">
+                                <!-- No row means nothing has been allocated for
+                                     this pair, which is different from being
+                                     allocated zero, so there is no editor. -->
+                                <!-- Employee is a JPA entity, so the id is read with
+                                     getId(). SpEL indexes the map with that
+                                     value as a key. -->
+                                <th:block th:if="${matrix[employee.getId()] != null and matrix[employee.getId()].containsKey(leaveType.id)}">
+                                    <div th:with="balance=${matrix[employee.getId()].get(leaveType.id)}">
+                                        <div class="tnum muted" style="font-size:12px"
+                                             th:text="${fmt.days(balance.entitled)} + ' / ' + ${fmt.days(balance.used)} + ' / ' + ${fmt.days(balance.pending)}">
+                                            0 / 0 / 0
+                                        </div>
+                                        <form th:action="@{/admin/balances/set}" method="post" class="row">
+                                            <input type="hidden" name="userId" th:value="${employee.id}">
+                                            <input type="hidden" name="leaveTypeId" th:value="${leaveType.id}">
+                                            <input type="hidden" name="year" th:value="${year}">
+                                            <input class="field tnum" type="number" name="entitled" step="0.5" min="0"
+                                                   style="width:90px" th:value="${balance.entitled}"
+                                                   th:attr="aria-label=${'Entitlement for ' + employee.name + ', ' + leaveType.name}">
+                                            <button class="btn-secondary btn-sm" type="submit">Set</button>
+                                        </form>
+                                    </div>
+                                </th:block>
+                                <span th:unless="${matrix[employee.getId()] != null and matrix[employee.getId()].containsKey(leaveType.id)}"
+                                      class="muted" style="font-size:12px">not set</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="hint" style="margin-top:12px"
+                   th:text="'Balances reset each January to the leave type default. Rows appear once an employee has a balance for that type in ' + ${year} + '.'"></p>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>
