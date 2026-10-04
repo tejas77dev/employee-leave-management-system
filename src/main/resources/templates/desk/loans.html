@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Loans')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Loans</h1>
+                    <p class="lede" th:text="${total} + (${total} == 1 ? ' loan matches' : ' loans match')">0 loans</p>
+                </div>
+                <a class="btn-secondary" th:href="@{/desk}">Lend a book</a>
+            </header>
+
+            <!-- Counters ignore the filters on purpose: they read as "how much is
+                 out there", not as three more filtered numbers. -->
+            <section class="grid grid-4" aria-label="Counters">
+                <div class="stat">
+                    <div class="stat-label">On loan</div>
+                    <div class="stat-value" th:text="${outCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Overdue</div>
+                    <div class="stat-value" th:classappend="${overdueCount > 0 ? 'rose' : ''}"
+                         th:text="${overdueCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Returned</div>
+                    <div class="stat-value" th:text="${returnedCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lost</div>
+                    <div class="stat-value" th:text="${lostCount}">0</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.returned}" class="alert-success" role="status">
+                <span th:if="${param.fine}" th:text="'Book returned. Fine to charge: ' + ${param.fine}">Book returned.</span>
+                <span th:unless="${param.fine}">Book returned. Nothing owed.</span>
+            </div>
+            <div th:if="${param.lost}" class="alert-info" role="status">
+                <span th:text="'Written off as lost. Replacement charge: ' + ${param.fine}">Written off.</span>
+            </div>
+
+            <section class="card">
+                <form method="get" th:action="@{/desk/loans}" class="filters">
+                    <div>
+                        <label class="label" for="status">Status</label>
+                        <select class="field" id="status" name="status">
+                            <option value="">All</option>
+                            <option th:each="value : ${statuses}" th:value="${value}" th:text="${fmt.status(value)}"
+                                    th:selected="${status != null and status == value}">Status</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}"
+                               placeholder="Title, author or card number">
+                    </div>
+                    <button class="btn-secondary" type="submit">Apply</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/desk/loans}">Reset</a>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(loans)}" class="empty">No loans match those filters.</div>
+
+                <div th:unless="${#lists.isEmpty(loans)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Member</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                            <th>Fine</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="issue : ${loans}">
+                            <td>
+                                <a th:href="@{/books/{id}(id=${issue.book.id})}" th:text="${issue.book.title}">Title</a>
+                                <div class="hint" th:text="${issue.book.author}">Author</div>
+                            </td>
+                            <td>
+                                <span th:text="${fmt.memberName(issue.member)}">Member</span>
+                                <div class="hint tnum" th:text="${issue.member.memberId}">LIB-0001</div>
+                                <div class="hint" th:if="${issue.member.department != null}"
+                                     th:text="${issue.member.department}">Department</div>
+                            </td>
+                            <td class="tnum">
+                                <span th:text="${fmt.loanPeriod(issue)}">Period</span>
+                                <div class="hint" th:if="${issue.returnDate != null}"
+                                     th:text="'Back ' + ${fmt.date(issue.returnDate)}">Back</div>
+                            </td>
+                            <td>
+                                <span th:class="${fmt.statusClass(issue.status)}"
+                                      th:text="${fmt.status(issue.status)}">Status</span>
+                                <div class="hint" th:if="${issue.remarks != null}" th:text="${issue.remarks}">Note</div>
+                            </td>
+                            <td th:class="${fmt.dueTone(issue)}" th:text="${fmt.dueLabel(issue)}">Due</td>
+                            <td class="tnum">
+                                <span th:if="${issue.fineAmount != null and issue.fineAmount.signum() > 0}"
+                                      th:text="${fmt.price(issue.fineAmount)}">0.00</span>
+                                <span th:unless="${issue.fineAmount != null and issue.fineAmount.signum() > 0}"
+                                      class="muted">—</span>
+                            </td>
+                            <td class="cell-actions">
+                                <!-- Only an open loan can be closed, so the actions are
+                                     offered only while it is still out. -->
+                                <th:block th:if="${issue.open}">
+                                    <form th:action="@{/desk/loans/{id}/return(id=${issue.id})}" method="post"
+                                          class="inline-form">
+                                        <button class="btn-approve btn-sm" type="submit">Take back</button>
+                                    </form>
+                                    <form th:action="@{/desk/loans/{id}/lost(id=${issue.id})}" method="post"
+                                          class="inline-form">
+                                        <input type="hidden" name="remarks" value="Reported lost at the desk">
+                                        <button class="btn-reject btn-sm" type="submit">Write off</button>
+                                    </form>
+                                </th:block>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav th:replace="~{fragments/shell :: pager(
+                        ${page},
+                        ${page > 0} ? @{/desk/loans(status=${status}, q=${query}, page=${page - 1})} : null,
+                        ${hasNext} ? @{/desk/loans(status=${status}, q=${query}, page=${page + 1})} : null)}"></nav>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

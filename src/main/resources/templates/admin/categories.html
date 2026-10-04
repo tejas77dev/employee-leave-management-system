@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Categories')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Administration</p>
+                    <h1>Categories</h1>
+                    <p class="lede">How the catalogue is organised, and which shelves titles sit on.</p>
+                </div>
+            </header>
+
+            <section class="grid grid-3" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Categories</div>
+                    <div class="stat-value" th:text="${#lists.size(categories)}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Titles</div>
+                    <div class="stat-value" th:text="${titleCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Books out</div>
+                    <div class="stat-value" th:text="${outCount}">0</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.saved}" class="alert-success" role="status">Category saved.</div>
+
+            <section class="card">
+                <h2>Add a category</h2>
+                <!-- Leaving the id empty creates; the rows below edit in place. -->
+                <form th:action="@{/admin/categories/save}" method="post" class="filters">
+                    <div>
+                        <label class="label" for="name">Name</label>
+                        <input class="field" id="name" name="name" maxlength="100" required
+                               placeholder="Computing">
+                    </div>
+                    <div>
+                        <label class="label" for="description">Description</label>
+                        <input class="field" id="description" name="description" maxlength="255"
+                               placeholder="Programming, systems and software engineering">
+                    </div>
+                    <input type="hidden" name="active" value="true">
+                    <button class="btn-secondary" type="submit">Add category</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(categories)}" class="empty">No categories yet.</div>
+
+                <div th:unless="${#lists.isEmpty(categories)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>State</th>
+                            <th>Added</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="category : ${categories}">
+                            <td>
+                                <form th:action="@{/admin/categories/save}" method="post" class="row-form">
+                                    <input type="hidden" name="id" th:value="${category.id}">
+                                    <input class="field field-inline" name="name" th:value="${category.name}"
+                                           maxlength="100" aria-label="Category name">
+                                    <input class="field field-inline-wide" name="description"
+                                           th:value="${category.description}" maxlength="255"
+                                           placeholder="Description" aria-label="Description">
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" name="active" value="true"
+                                               th:checked="${category.active}">
+                                        <span>Active</span>
+                                    </label>
+                                    <button class="btn-secondary btn-sm" type="submit">Save</button>
+                                </form>
+                            </td>
+                            <td class="hint" th:text="${category.description} ?: '—'">Description</td>
+                            <td>
+                                <span th:if="${category.active}" class="badge badge-approved">Active</span>
+                                <span th:unless="${category.active}" class="badge badge-muted">Hidden</span>
+                            </td>
+                            <td class="tnum hint" th:text="${fmt.timestamp(category.createdAt)}">When</td>
+                            <td></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="hint">
+                    A hidden category stops appearing in the catalogue filters. Titles already filed
+                    under it keep their place and are still lent; only the choice list changes.
+                </p>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

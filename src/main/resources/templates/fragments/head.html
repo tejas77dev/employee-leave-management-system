@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="head(title)">
-<head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  The document head, shared by every authenticated page.
+
+  Included with th:replace="~{fragments/head :: head('Some title')}". The page
+  supplies its own title so the browser tab and the sidebar heading agree.
+-->
+<head th:fragment="head(title)">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${title} ?: 'Leave Manager'">Leave Manager</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title th:text="${title} ?: 'Library Manager'">Library Manager</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
-<body>
-</body>
+
 </html>

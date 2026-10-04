@@ -8,6 +8,6 @@ RUN ./mvnw clean package -DskipTests
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=builder /app/target/leave-manager-1.0.0.jar app.jar
-EXPOSE 8080
+COPY --from=builder /app/target/library-manager-1.0.0.jar app.jar
+EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${book.title})}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">
+                        <a th:href="@{/catalog}">Catalogue</a>
+                        <span th:if="${book.category != null}">
+                            · <span th:text="${book.category.name}">Category</span>
+                        </span>
+                    </p>
+                    <h1 th:text="${book.title}">Title</h1>
+                    <p class="lede" th:text="${book.author}">Author</p>
+                </div>
+                <a th:if="${#authorization.expression('hasAnyRole(''ADMIN'',''LIBRARIAN'')')}"
+                   class="btn-secondary" th:href="@{/desk/books/{id}/edit(id=${book.id})}">Edit this title</a>
+            </header>
+
+            <!-- A raised request comes back as ?requested=, a refusal as ?requestError=. -->
+            <div th:if="${param.requested}" class="alert-success" role="status">
+                Request sent. The desk works through requests in the order they arrive.
+            </div>
+            <div th:if="${param.requestError}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.requestError}">Something went wrong.</div>
+
+            <section class="grid grid-3">
+                <div class="stat">
+                    <div class="stat-label">Availability</div>
+                    <div class="stat-value" th:classappend="${fmt.availabilityTone(book)}"
+                         th:text="${fmt.availability(book)}">0 of 0</div>
+                    <div class="hint" th:if="${canBorrow}">A copy is on the shelf</div>
+                    <div class="hint" th:unless="${canBorrow}">Every copy is out</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Copies on loan</div>
+                    <div class="stat-value" th:text="${#lists.size(out)}">0</div>
+                    <div class="hint" th:text="${book.totalCopies} + ' in total'">0 in total</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Shelf</div>
+                    <div class="stat-value" th:text="${book.rackNo} ?: '—'">A1</div>
+                    <div class="hint" th:text="${book.publishedYear} ?: 'Year unknown'">Year</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Details</h2>
+                <dl class="dl">
+                    <div>
+                        <dt>ISBN</dt>
+                        <dd th:text="${book.isbn}">9780000000000</dd>
+                    </div>
+                    <div>
+                        <dt>Publisher</dt>
+                        <dd th:text="${book.publisher} ?: '—'">Publisher</dd>
+                    </div>
+                    <div>
+                        <dt>Category</dt>
+                        <dd th:text="${book.category != null} ? ${book.category.name} : '—'">Category</dd>
+                    </div>
+                </dl>
+                <p th:if="${book.category != null and book.category.description != null}"
+                   class="muted" style="margin-top:10px" th:text="${book.category.description}">Description</p>
+            </section>
+
+            <!--
+              Asking for a title. A request is not a reservation: no copy is held
+              against it, and it is the desk who decides when one is handed over.
+              The button disappears once there is a live request, because a
+              second one for the same title would sit behind the first for ever.
+            -->
+            <section class="card" th:if="${viewerMember != null}">
+                <div class="spread">
+                    <h2>Request this book</h2>
+                    <span th:if="${waitingCount > 0}" class="badge badge-pending"
+                          th:text="${waitingCount} + (${waitingCount} == 1 ? ' request waiting' : ' requests waiting')">
+                        0 waiting</span>
+                </div>
+
+                <div th:if="${myRequest != null}">
+                    <p>
+                        You asked for this title
+                        <span th:text="'on ' + ${fmt.timestamp(myRequest.createdAt)}">on then</span>.
+                        It is on the desk's list.
+                    </p>
+                    <p class="hint" th:if="${myRequest.note}" th:text="${myRequest.note}">Why</p>
+                </div>
+
+                <form th:unless="${myRequest != null}"
+                      th:action="@{/books/{id}/request(id=${book.id})}" method="post">
+                    <label class="label" for="note">Why you want it
+                        <span class="muted">(optional)</span></label>
+                    <input class="field" id="note" name="note" maxlength="500"
+                           placeholder="For the semester project, say">
+                    <button class="btn-primary" type="submit">Request this title</button>
+                </form>
+
+                <p class="hint" th:if="${canBorrow}">
+                    A copy is on the shelf now, so you can also just borrow it at the desk.
+                </p>
+                <p class="hint" th:unless="${canBorrow}">
+                    Every copy is out. Asking for it puts you in the queue for the next one back.
+                </p>
+            </section>
+
+            <section class="card" th:if="${viewerMember == null}">
+                <h2>Request this book</h2>
+                <p class="muted">
+                    Your account is not linked to a library card, so there is nothing to hold a book
+                    against. Ask at the desk to be registered and you can borrow straight away.
+                </p>
+            </section>
+
+            <section class="card">
+                <h2>Copies currently out</h2>
+                <!--
+                  Shown to help a member find out a book is out before crossing the
+                  desk. Only the dates are listed, never who has it: naming current
+                  borrowers to another member is not the library's business.
+                -->
+                <div th:if="${#lists.isEmpty(out)}" class="empty">Every copy is on the shelf.</div>
+                <div th:unless="${#lists.isEmpty(out)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Went out</th>
+                            <th>Due back</th>
+                            <th>How long</th>
+                            <th>Deadline</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="issue : ${out}">
+                            <td class="tnum" th:text="${fmt.date(issue.issueDate)}">Date</td>
+                            <td class="tnum" th:text="${fmt.date(issue.dueDate)}">Date</td>
+                            <td th:text="${fmt.heldFor(issue)}">out 1 day</td>
+                            <td th:class="${fmt.dueTone(issue)}" th:text="${fmt.dueLabel(issue)}">Due</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

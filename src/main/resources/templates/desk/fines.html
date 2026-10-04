@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Fines')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Fines</h1>
+                    <p class="lede">Charges raised when books come back late or are written off.</p>
+                </div>
+                <a class="btn-secondary" th:href="@{/desk/loans}">Loans</a>
+            </header>
+
+            <section class="grid grid-3" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Outstanding</div>
+                    <div class="stat-value" th:text="${fmt.price(totalOutstanding)}">0.00</div>
+                    <div class="hint" th:text="${unpaidCount} + ' unsettled'">0 unsettled</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Fines waiting</div>
+                    <div class="stat-value" th:text="${unpaidCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Settled</div>
+                    <div class="stat-value" th:text="${settledCount}">0</div>
+                    <div class="hint">Payments recorded in the activity log</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.paid}" class="alert-success" role="status">Fine settled.</div>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(fines)}" class="empty">No fines are outstanding.</div>
+
+                <div th:unless="${#lists.isEmpty(fines)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Title</th>
+                            <th>Was due</th>
+                            <th>Back</th>
+                            <th>Amount</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="fine : ${fines}">
+                            <td>
+                                <span th:text="${fmt.memberName(fine.issue.member)}">Member</span>
+                                <div class="hint tnum" th:text="${fine.issue.member.memberId}">LIB-0001</div>
+                                <div class="hint" th:if="${fmt.memberEmail(fine.issue.member) != ''}"
+                                     th:text="${fmt.memberEmail(fine.issue.member)}">Email</div>
+                            </td>
+                            <td>
+                                <a th:href="@{/books/{id}(id=${fine.issue.book.id})}"
+                                   th:text="${fine.issue.book.title}">Title</a>
+                                <div class="hint" th:text="${fine.issue.book.author}">Author</div>
+                            </td>
+                            <td class="tnum" th:text="${fmt.date(fine.issue.dueDate)}">Date</td>
+                            <td class="tnum">
+                                <span th:if="${fine.issue.returnDate != null}"
+                                      th:text="${fmt.date(fine.issue.returnDate)}">Date</span>
+                                <span th:unless="${fine.issue.returnDate != null}" class="muted">still out</span>
+                            </td>
+                            <td class="tnum" th:text="${fmt.price(fine.amount)}">0.00</td>
+                            <td class="cell-actions">
+                                <!-- The repository update is guarded on paid = false,
+                                     so a double click settles the fine once and the
+                                     second attempt is refused. -->
+                                <form th:action="@{/desk/fines/{id}/pay(id=${fine.id})}" method="post"
+                                      class="inline-form">
+                                    <button class="btn-approve btn-sm" type="submit">Mark paid</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav th:replace="~{fragments/shell :: pager(
+                        ${page},
+                        ${page > 0} ? @{/desk/fines(page=${page - 1})} : null,
+                        ${hasNext} ? @{/desk/fines(page=${page + 1})} : null)}"></nav>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

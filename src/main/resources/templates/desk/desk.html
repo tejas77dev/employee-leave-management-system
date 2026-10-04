@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Issue desk')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Lend a book</h1>
+                    <p class="lede" th:text="${outCount} + ' currently on loan'">0 on loan</p>
+                </div>
+                <div class="row">
+                    <a class="btn-secondary" th:href="@{/desk/loans}">Loans</a>
+                    <a class="btn-secondary" th:href="@{/desk/fines}">Fines</a>
+                    <a class="btn-secondary" th:href="@{/desk/members}">Register a member</a>
+                </div>
+            </header>
+
+            <!--
+              Members' requests live on their own page rather than being mixed in
+              here, because a queue of forty needs reading top to bottom and the
+              issue form above should stay the first thing on the desk.
+            -->
+            <section class="card" th:if="${pendingRequests > 0}">
+                <div class="spread">
+                    <h2>Requests waiting</h2>
+                    <span class="badge badge-pending"
+                          th:text="${pendingRequests} + (${pendingRequests} == 1 ? ' request' : ' requests')">
+                        0 requests</span>
+                </div>
+                <p class="hint">
+                    Members have asked for titles that are not on the shelf. Granting one issues the
+                    loan on the spot.
+                </p>
+                <a class="btn-primary" style="width:auto;margin-top:12px" th:href="@{/desk/requests}">
+                    Work through the queue</a>
+            </section>
+
+            <!-- A failed issue comes back as ?error=, a successful one as ?issued=. -->
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.issued}" class="alert-success" role="status">Loan recorded.</div>
+
+            <section class="card">
+                <h2>Issue a copy</h2>
+                <form th:action="@{/desk/issue}" method="post" class="issue-form">
+                    <div class="issue-fields">
+                        <div>
+                            <label class="label" for="bookId">Title</label>
+                            <select class="field" id="bookId" name="bookId" required>
+                                <option value="">Choose a title</option>
+                                <option th:each="book : ${books}" th:value="${book.id}"
+                                        th:text="${book.title} + ' — ' + ${fmt.availability(book)} + ' [' + ${fmt.categoryName(book)} + ']'">
+                                    Title</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="label" for="memberId">Member</label>
+                            <select class="field" id="memberId" name="memberId" required>
+                                <option value="">Choose a member</option>
+                                <!--
+                                  The option carries the member's primary key, not
+                                  their card number, because that is what the service
+                                  locks and looks up. The card number is shown in the
+                                  label, since that is what the librarian reads out.
+                                -->
+                                <option th:each="member : ${members}" th:value="${member.id}"
+                                        th:text="${member.memberId} + ' — ' + ${fmt.memberName(member)}">
+                                    Member</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="label" for="dueDate">Due back</label>
+                            <input class="field" type="date" id="dueDate" name="dueDate"
+                                   th:value="${defaultDueDate}" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="label" for="remarks">Note <span class="muted">(optional)</span></label>
+                        <input class="field" id="remarks" name="remarks" maxlength="500"
+                               placeholder="Anything worth remembering about this loan">
+                    </div>
+
+                    <button class="btn-primary" type="submit">Issue this copy</button>
+                </form>
+                <p class="hint">
+                    The due date defaults to the standard loan period. A member's borrowing limit is
+                    checked when the loan is recorded, not here.
+                </p>
+            </section>
+
+            <section class="card">
+                <div class="spread">
+                    <h2>Overdue</h2>
+                    <span class="badge badge-pending" th:text="${#lists.size(accrued)} + ' owing'">0 owing</span>
+                </div>
+
+                <div th:if="${#lists.isEmpty(overdue)}" class="empty">Nothing is overdue. Long may it last.</div>
+
+                <div th:unless="${#lists.isEmpty(overdue)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Member</th>
+                            <th>Was due</th>
+                            <th>Late by</th>
+                            <th>Accrued fine</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="issue : ${overdue}">
+                            <td>
+                                <a th:href="@{/books/{id}(id=${issue.book.id})}" th:text="${issue.book.title}">Title</a>
+                                <div class="hint" th:text="${issue.book.author}">Author</div>
+                            </td>
+                            <td>
+                                <span th:text="${fmt.memberName(issue.member)}">Member</span>
+                                <div class="hint tnum" th:text="${issue.member.memberId}">LIB-0001</div>
+                            </td>
+                            <td class="tnum" th:text="${fmt.date(issue.dueDate)}">Date</td>
+                            <td class="rose tnum" th:text="${fmt.daysOverdue(issue)} + ' days'">0 days</td>
+                            <td class="tnum">
+                                <span th:if="${accrued.containsKey(issue)}"
+                                      th:text="${fmt.price(accrued.get(issue))}">0.00</span>
+                                <span th:unless="${accrued.containsKey(issue)}" class="muted">—</span>
+                            </td>
+                            <td class="cell-actions">
+                                <!--
+                                  Both actions post and redirect, so a refresh cannot
+                                  return the same copy twice or write it off twice.
+                                -->
+                                <form th:action="@{/desk/loans/{id}/return(id=${issue.id})}" method="post"
+                                      class="inline-form">
+                                    <button class="btn-approve btn-sm" type="submit">Take back</button>
+                                </form>
+                                <form th:action="@{/desk/loans/{id}/lost(id=${issue.id})}" method="post"
+                                      class="inline-form">
+                                    <input type="hidden" name="remarks" value="Reported lost at the desk">
+                                    <button class="btn-reject btn-sm" type="submit">Write off</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

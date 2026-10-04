@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard</title>
-    <link rel="stylesheet" th:href="@{/css/app.css}">
-</head>
+<head th:replace="~{fragments/head :: head('Dashboard')}"></head>
 <body>
 <div class="app-shell">
     <aside th:replace="~{fragments/shell :: sidebar}"></aside>
@@ -15,118 +10,255 @@
 
             <header class="page-header">
                 <div>
-                    <p class="eyebrow" th:text="${year} + ' season'">2026 season</p>
-                    <h1 th:text="'Hello, ' + ${me.firstName()}">Hello</h1>
+                    <p class="eyebrow" th:text="${isStaff} ? 'Issue desk' : 'Your account'">Section</p>
+                    <h1 th:text="${isStaff} ? 'Dashboard' : 'Your loans'">Dashboard</h1>
                 </div>
-                <a class="btn-primary" style="width:auto;margin:0" th:href="@{/requests/new}">Request leave</a>
+                <a th:if="${!isStaff}" class="btn-secondary" th:href="@{/catalog}">Browse the catalogue</a>
             </header>
 
-            <div th:if="${error}" class="alert-error" role="alert" th:text="${error}"></div>
+            <!-- ================= Staff ================= -->
+            <th:block th:if="${isStaff}">
 
-            <section class="grid grid-4" aria-label="Summary">
-                <div class="stat">
-                    <div class="stat-label">Total remaining</div>
-                    <div class="stat-value" data-testid="total-remaining" th:text="${fmt.days(totalRemaining)} + ' d'">0 d</div>
-                </div>
-                <div class="stat" th:if="${isHr}">
-                    <div class="stat-label">Awaiting approval</div>
-                    <div class="stat-value" th:text="${pendingCount}">0</div>
-                </div>
-                <div class="stat" th:if="${isHr}">
-                    <div class="stat-label">Approved</div>
-                    <div class="stat-value" th:text="${approvedCount}">0</div>
-                </div>
-                <div class="stat" th:if="${isHr}">
-                    <div class="stat-label">Off today</div>
-                    <div class="stat-value" th:text="${#lists.size(offToday)}">0</div>
-                </div>
-            </section>
-
-            <section class="card">
-                <h2 th:text="${year} + ' balances'">Balances</h2>
-                <div th:if="${#lists.isEmpty(balances)}" class="empty">No active leave types are configured yet.</div>
-                <div th:unless="${#lists.isEmpty(balances)}" class="grid grid-3">
-                    <div th:each="balance : ${balances}"
-                         class="stat"
-                         data-testid="balance-tile"
-                         th:attr="data-leave-type=${balance.leaveType.name}">
-                        <div class="spread">
-                            <span class="stat-label" th:text="${balance.leaveType.name}">Casual Leave</span>
-                            <span class="tnum" th:text="${fmt.days(balance.remaining())} + ' left'">0 left</span>
-                        </div>
-                        <!-- th:classappend takes a bare expression, not a
-                             ${...} literal, so the tone is chosen inline.
-                             Rose means spent; amber means something is
-                             reserved and the remaining figure is low. -->
-                        <div class="meter"
-                             th:classappend="${fmt.meterTone(balance)}"
-                             role="progressbar"
-                             th:attr="aria-valuenow=${fmt.percent(balance.entitled(), balance.used(), balance.pending())}">
-                            <span th:style="'width:' + ${fmt.percent(balance.entitled(), balance.used(), balance.pending())} + '%'"></span>
-                        </div>
-                        <dl class="dl">
-                            <div>
-                                <dt>Entitled</dt>
-                                <dd th:text="${fmt.days(balance.entitled())}">0</dd>
-                            </div>
-                            <div>
-                                <dt>Used</dt>
-                                <dd th:text="${fmt.days(balance.used())}">0</dd>
-                            </div>
-                            <div>
-                                <dt>Pending</dt>
-                                <dd th:text="${fmt.days(balance.pending())}">0</dd>
-                            </div>
-                        </dl>
+                <section class="grid grid-4" aria-label="Counters">
+                    <div class="stat">
+                        <div class="stat-label">On loan</div>
+                        <div class="stat-value" th:text="${outCount}">0</div>
                     </div>
-                </div>
-            </section>
+                    <div class="stat">
+                        <div class="stat-label">Overdue</div>
+                        <div class="stat-value" th:classappend="${overdueCount > 0 ? 'rose' : ''}"
+                             th:text="${overdueCount}">0</div>
+                        <div class="hint" th:if="${overdueCount > 0}">Needs chasing</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Fines outstanding</div>
+                        <div class="stat-value" th:text="${fmt.money(outstandingFines)}">0.00</div>
+                        <div class="hint" th:text="${unpaidFineCount} + ' unsettled'">0 unsettled</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Titles</div>
+                        <div class="stat-value" th:text="${titleCount}">0</div>
+                        <div class="hint" th:text="${memberCount} + ' members'">0 members</div>
+                    </div>
+                </section>
 
-            <section th:if="${isHr}" class="grid grid-2">
-                <div class="card">
-                    <h2>Awaiting your approval</h2>
-                    <div class="stat-value" th:text="${pendingCount}">0</div>
-                    <a th:href="@{/admin/requests}">Review the queue</a>
-                </div>
-                <div class="card">
-                    <h2>Off today</h2>
-                    <div th:if="${#lists.isEmpty(offToday)}" class="empty">Nobody is off today.</div>
-                    <ul th:unless="${#lists.isEmpty(offToday)}" class="stack" style="list-style:none;padding:0;margin:0">
-                        <li th:each="request : ${offToday}">
-                            <span th:text="${request.user.name}">Name</span>
-                            <span class="muted" th:text="' — ' + ${request.leaveType.name}">— type</span>
-                        </li>
-                    </ul>
-                </div>
-            </section>
+                <section class="card" th:if="${pendingRequests > 0}">
+                    <div class="spread">
+                        <h2>Requests waiting</h2>
+                        <span class="badge badge-pending"
+                              th:text="${pendingRequests} + (${pendingRequests} == 1 ? ' request' : ' requests')">
+                            0 requests</span>
+                    </div>
+                    <p class="hint">
+                        Members have asked for titles that are not on the shelf. Granting one issues the
+                        loan on the spot.
+                    </p>
+                    <a class="btn-primary" style="width:auto;margin-top:12px" th:href="@{/desk/requests}">
+                        Work through the queue</a>
+                </section>
 
-            <section class="card">
-                <h2>Recent requests</h2>
-                <div th:if="${#lists.isEmpty(recent)}" class="empty">You have not requested any leave yet.</div>
-                <div th:unless="${#lists.isEmpty(recent)}" class="table-wrap">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Dates</th>
-                            <th>Days</th>
-                            <th>Status</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="request : ${recent}">
-                            <td th:text="${request.leaveType.name}">Type</td>
-                            <td th:text="${fmt.requestRange(request)}">Dates</td>
-                            <td class="tnum" th:text="${fmt.days(request.days)}">0</td>
-                            <td>
-                                <span th:classappend="${fmt.statusClass(request.status)}"
-                                      th:text="${fmt.status(request.status)}">Pending</span>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+                <section class="card">
+                    <div class="spread">
+                        <h2>Lend a book</h2>
+                        <a class="btn-primary" style="width:auto;margin-top:0" th:href="@{/desk}">Open the desk</a>
+                    </div>
+                    <p class="hint" th:if="${#lists.isEmpty(issuedToday)}">Nothing has gone out today.</p>
+                    <div th:unless="${#lists.isEmpty(issuedToday)}" class="table-wrap">
+                        <table>
+                            <caption class="hint" style="text-align:left;padding-bottom:6px">Issued today</caption>
+                            <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Member</th>
+                                <th>Due</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="issue : ${issuedToday}">
+                                <td>
+                                    <a th:href="@{/books/{id}(id=${issue.book.id})}" th:text="${issue.book.title}">Title</a>
+                                </td>
+                                <td>
+                                    <span th:text="${fmt.memberName(issue.member)}">Member</span>
+                                    <div class="hint tnum" th:text="${issue.member.memberId}">LIB-0001</div>
+                                </td>
+                                <td th:class="${fmt.dueTone(issue)}" th:text="${fmt.dueLabel(issue)}">Due</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="spread">
+                        <h2>Recent activity</h2>
+                        <a th:href="@{/desk/loans}">All loans</a>
+                    </div>
+                    <div th:if="${#lists.isEmpty(recent)}" class="empty">No loans recorded yet.</div>
+                    <div th:unless="${#lists.isEmpty(recent)}" class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Member</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                                <th>Deadline</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="issue : ${recent}">
+                                <td>
+                                    <a th:href="@{/books/{id}(id=${issue.book.id})}" th:text="${issue.book.title}">Title</a>
+                                    <div class="hint" th:text="${issue.book.author}">Author</div>
+                                </td>
+                                <td>
+                                    <span th:text="${fmt.memberName(issue.member)}">Member</span>
+                                    <div class="hint tnum" th:text="${issue.member.memberId}">LIB-0001</div>
+                                </td>
+                                <td class="tnum" th:text="${fmt.loanPeriod(issue)}">Period</td>
+                                <td><span th:class="${fmt.statusClass(issue.status)}" th:text="${fmt.status(issue.status)}">Status</span></td>
+                                <td th:class="${fmt.dueTone(issue)}" th:text="${fmt.dueLabel(issue)}">Due</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </th:block>
+
+            <!-- ================= Borrower ================= -->
+            <th:block th:unless="${isStaff}">
+
+                <div th:if="${needsRegistration}" class="card">
+                    <h2>No membership yet</h2>
+                    <p class="muted">
+                        Your account is not linked to a library card, so there is nothing to lend
+                        against. Ask at the desk to be registered and you can borrow straight away.
+                    </p>
                 </div>
-            </section>
+
+                <th:block th:if="${!needsRegistration}">
+
+                    <section class="grid grid-3" aria-label="Your summary">
+                        <div class="stat">
+                            <div class="stat-label">Books out</div>
+                            <div class="stat-value" th:text="${#lists.size(openLoans)}">0</div>
+                            <div class="hint" th:text="${remainingSlots} + ' of ' + ${limit} + ' left'">0 left</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Overdue</div>
+                            <div class="stat-value" th:classappend="${!#lists.isEmpty(myOverdue) ? 'rose' : ''}"
+                                 th:text="${#lists.size(myOverdue)}">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Fines to pay</div>
+                            <div class="stat-value" th:text="${fmt.money(totalOutstanding)}">0.00</div>
+                            <div class="hint" th:if="${#lists.isEmpty(myFines)}">Nothing outstanding</div>
+                            <div class="hint" th:unless="${#lists.isEmpty(myFines)}"
+                                 th:text="${#lists.size(myFines)} + ' to settle at the desk'">to settle</div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <h2>Your loans</h2>
+                        <div th:if="${#lists.isEmpty(openLoans)}" class="empty">
+                            Nothing out at the moment.
+                        </div>
+                        <div th:unless="${#lists.isEmpty(openLoans)}" class="table-wrap">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Borrowed</th>
+                                    <th>Due</th>
+                                    <th>Deadline</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="issue : ${openLoans}">
+                                    <td>
+                                        <a th:href="@{/books/{id}(id=${issue.book.id})}" th:text="${issue.book.title}">Title</a>
+                                        <div class="hint" th:text="${issue.book.author}">Author</div>
+                                    </td>
+                                    <td class="tnum" th:text="${fmt.date(issue.issueDate)}">Date</td>
+                                    <td class="tnum" th:text="${fmt.date(issue.dueDate)}">Date</td>
+                                    <td th:class="${fmt.dueTone(issue)}" th:text="${fmt.dueLabel(issue)}">Due</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <h2>Your requests</h2>
+                        <div th:if="${#lists.isEmpty(myRequests)}" class="empty">
+                            You have not asked for anything yet. Open a title in the catalogue to request it.
+                        </div>
+                        <div th:unless="${#lists.isEmpty(myRequests)}" class="table-wrap">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Asked</th>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>What the desk said</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="request : ${myRequests}">
+                                    <td class="tnum" th:text="${fmt.timestamp(request.createdAt)}">When</td>
+                                    <td>
+                                        <a th:href="@{/books/{id}(id=${request.book.id})}"
+                                           th:text="${request.book.title}">Title</a>
+                                        <div class="hint" th:if="${request.note}" th:text="${request.note}">Why</div>
+                                    </td>
+                                    <td>
+                                        <span th:class="${fmt.requestStatusClass(request.status)}"
+                                              th:text="${fmt.requestStatus(request.status)}">Status</span>
+                                        <!-- An approved request names the loan it became,
+                                             so the member can find the copy and its due
+                                             date without hunting through the log. -->
+                                        <div class="hint" th:if="${request.issue != null}"
+                                             th:text="'due ' + ${fmt.date(request.issue.dueDate)}">due then</div>
+                                    </td>
+                                    <td th:text="${request.decisionNote} ?: '—'">Note</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="hint" th:if="${openRequestCount > 0}"
+                           th:text="${openRequestCount} + ' waiting for the desk to look at them'"
+                           data-testid="open-request-count">waiting</p>
+                    </section>
+
+                    <section class="card">
+                        <h2>Fines</h2>
+                        <div th:if="${#lists.isEmpty(myFines)}" class="empty">You have no unpaid fines.</div>
+                        <div th:unless="${#lists.isEmpty(myFines)}" class="table-wrap">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Charged</th>
+                                    <th>Reason</th>
+                                    <th>Amount</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="fine : ${myFines}">
+                                    <td class="tnum" th:text="${fmt.timestamp(fine.calculatedAt)}">When</td>
+                                    <td>Overdue loan</td>
+                                    <td class="tnum" th:text="${fmt.price(fine.amount)}">0.00</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <p class="hint">Fines are settled at the desk when a book is returned.</p>
+                        </div>
+                    </section>
+
+                </th:block>
+
+            </th:block>
 
         </main>
     </div>

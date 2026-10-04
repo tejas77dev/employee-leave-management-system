@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Members')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Members</h1>
+                    <p class="lede" th:text="${totalMembers} + (${totalMembers} == 1 ? ' cardholder' : ' cardholders')">0 cardholders</p>
+                </div>
+            </header>
+
+            <section class="grid grid-3" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Cards issued</div>
+                    <div class="stat-value" th:text="${totalMembers}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value" th:text="${activeCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Next card</div>
+                    <div class="stat-value" style="font-size:20px" th:text="${nextMemberId}">LIB-0001</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.created}" class="alert-success" role="status">Member registered.</div>
+            <div th:if="${param.updated}" class="alert-success" role="status">Member updated.</div>
+
+            <section class="card">
+                <h2>Register a member</h2>
+                <!--
+                  The card number is left blank to be filled in from the register's
+                  next-card counter, because typing one by hand is how duplicates
+                  get created. A password is optional: a member registered without
+                  one can sign in only after the desk sets it.
+                -->
+                <form th:action="@{/desk/members/create}" method="post" class="member-form">
+                    <div class="grid grid-3">
+                        <div>
+                            <label class="label" for="m-name">Name</label>
+                            <input class="field" id="m-name" name="name" maxlength="191" required>
+                        </div>
+                        <div>
+                            <label class="label" for="m-email">Email</label>
+                            <input class="field" type="email" id="m-email" name="email" required>
+                        </div>
+                        <div>
+                            <label class="label" for="m-password">Password</label>
+                            <input class="field" type="password" id="m-password" name="password"
+                                   minlength="8" autocomplete="new-password">
+                            <div class="hint">At least 8 characters; leave blank for no sign-in yet</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-3">
+                        <div>
+                            <label class="label" for="m-memberId">Card number</label>
+                            <input class="field" id="m-memberId" name="memberId" maxlength="20"
+                                   th:placeholder="${nextMemberId}" placeholder="LIB-0001">
+                            <div class="hint">Blank takes the next card automatically</div>
+                        </div>
+                        <div>
+                            <label class="label" for="m-department">Department</label>
+                            <input class="field" id="m-department" name="department" maxlength="100">
+                        </div>
+                        <div>
+                            <label class="label" for="m-maxBooks">Borrowing limit</label>
+                            <input class="field" type="number" min="0" max="20" id="m-maxBooks"
+                                   name="maxBooks" value="4">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div>
+                            <label class="label" for="m-phone">Phone</label>
+                            <input class="field" id="m-phone" name="phone" maxlength="20">
+                        </div>
+                        <div>
+                            <label class="label" for="m-address">Address</label>
+                            <input class="field" id="m-address" name="address" maxlength="255">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" type="submit">Register member</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <form method="get" th:action="@{/desk/members}" class="filters">
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}"
+                               placeholder="Card, name, department or email">
+                    </div>
+                    <button class="btn-secondary" type="submit">Search</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/desk/members}">Reset</a>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(members)}" class="empty">No members match that search.</div>
+
+                <div th:unless="${#lists.isEmpty(members)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Card</th>
+                            <th>Member</th>
+                            <th>Contact</th>
+                            <th>Out</th>
+                            <th>Limit</th>
+                            <th>State</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="member : ${members}">
+                            <td class="tnum" th:text="${member.memberId}">LIB-0001</td>
+                            <td>
+                                <span th:text="${fmt.memberName(member)}">Name</span>
+                                <div class="hint" th:if="${member.department != null}"
+                                     th:text="${member.department}">Department</div>
+                            </td>
+                            <td>
+                                <div class="hint" th:if="${fmt.memberEmail(member) != ''}"
+                                     th:text="${fmt.memberEmail(member)}">Email</div>
+                                <div class="hint" th:if="${member.phone != null}"
+                                     th:text="${member.phone}">Phone</div>
+                            </td>
+                            <td class="tnum">
+                                <span th:text="${onLoan.get(member.id)}">0</span>
+                                <div class="hint rose" th:if="${overdue.get(member.id) > 0}"
+                                     th:text="${overdue.get(member.id)} + ' overdue'">0 overdue</div>
+                            </td>
+                            <td class="tnum" th:text="${member.maxBooksAllowed}">4</td>
+                            <td>
+                                <span th:if="${member.active}" class="badge badge-approved">Active</span>
+                                <span th:unless="${member.active}" class="badge badge-muted">Closed</span>
+                            </td>
+                            <td class="cell-actions">
+                                <!--
+                                  Each row edits through its own small form rather than
+                                  one form for the whole table, so a saved row cannot
+                                  overwrite a colleague's edits with whatever the rest
+                                  of the page happened to hold.
+                                -->
+                                <form th:action="@{/desk/members/update}" method="post" class="row-form">
+                                    <input type="hidden" name="memberRowId" th:value="${member.id}">
+                                    <input type="hidden" name="phone" th:value="${member.phone}">
+                                    <input type="hidden" name="department" th:value="${member.department}">
+                                    <input type="hidden" name="address" th:value="${member.address}">
+
+                                    <label class="sr-label" th:for="'limit-' + ${member.id}">Limit</label>
+                                    <input class="field field-inline" type="number" min="0" max="20"
+                                           th:id="'limit-' + ${member.id}" name="maxBooks"
+                                           th:value="${member.maxBooksAllowed}">
+
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" name="active"
+                                               th:checked="${member.active}" value="true">
+                                        <span>Active</span>
+                                    </label>
+
+                                    <button class="btn-secondary btn-sm" type="submit">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

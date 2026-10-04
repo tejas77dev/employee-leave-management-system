@@ -1,7 +1,7 @@
-/* Leave Manager — layout and components.
+/* Library Manager — layout and components.
    Kept hand-written rather than utility-first so the app has no build step for
-   its styles, and so the pieces that carry meaning (status colours, a spent
-   balance) read clearly in one place. */
+   its styles, and so the pieces that carry meaning (loan status, availability,
+   lateness) read clearly in one place. */
 
 :root {
     --brand-50: #eef4ff;
@@ -57,6 +57,20 @@ h1, h2, h3 {
 
 .muted {
     color: var(--muted);
+}
+
+/* Tones for text that reports a state rather than setting one. Applied on their
+   own, and appended to a cell that already has its own class. */
+.rose {
+    color: var(--rose);
+}
+
+.amber {
+    color: var(--amber);
+}
+
+.green {
+    color: var(--green);
 }
 
 .tnum {
@@ -379,6 +393,27 @@ h1, h2, h3 {
     border: 1px solid transparent;
 }
 
+/* Loan states. The three are deliberately distinct in hue as well as in
+   lightness: a librarian scanning the log needs to tell "out" from "back" from
+   "written off" at a glance, without reading the words. */
+.badge-issued {
+    background: var(--brand-100);
+    color: var(--brand-700);
+}
+
+.badge-returned {
+    background: var(--green-bg);
+    color: var(--green);
+    border-color: #a7f3d0;
+}
+
+.badge-lost {
+    background: var(--red-bg);
+    color: var(--red);
+    border-color: #fecaca;
+}
+
+/* Anything flagged for attention rather than describing a loan. */
 .badge-pending {
     background: var(--amber-bg);
     color: var(--amber);
@@ -391,20 +426,10 @@ h1, h2, h3 {
     border-color: #a7f3d0;
 }
 
-.badge-rejected {
-    background: var(--red-bg);
-    color: var(--red);
-    border-color: #fecaca;
-}
-
-.badge-hr {
+/* Marks the signed-in user's own row in a list they also administer. */
+.badge-self {
     background: var(--brand-100);
     color: var(--brand-700);
-}
-
-.badge-employee {
-    background: #f1f5f9;
-    color: #475569;
 }
 
 .badge-muted {
@@ -454,6 +479,27 @@ h1, h2, h3 {
     gap: 8px;
     margin: 12px 0;
     font-size: 14px;
+}
+
+/* ---------- Forms on a desk ---------- */
+
+/* Forms that lay their fields out in rows rather than one long column, so a
+   librarian can see the whole loan before submitting it. */
+.issue-form, .member-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.issue-fields {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: 0 14px;
+}
+
+@media (max-width: 900px) {
+    .issue-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 /* ---------- Buttons ---------- */
@@ -545,6 +591,130 @@ tbody tr:last-child td {
     font-style: italic;
     color: var(--muted);
     font-size: 12px;
+}
+
+/* ---------- Actions inside table rows ---------- */
+
+/* The action column holds one or two controls per row. It is kept narrow so the
+   data columns keep their space on a laptop screen. */
+.cell-actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.cell-actions > * {
+    margin-left: 6px;
+}
+
+/* Each control is its own form, so two buttons in one row cannot post each
+   other's fields. */
+.inline-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.inline-form .field {
+    width: auto;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* A whole row edited in place: name, role and state side by side. */
+.row-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin: 0;
+}
+
+.field-inline {
+    width: auto;
+    min-width: 120px;
+    padding: 5px 8px;
+    font-size: 13px;
+}
+
+.field-inline-wide {
+    min-width: 200px;
+}
+
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* Visible to a screen reader, not to the eye. Used where a control has no
+   label of its own, such as the inline editors in a table row. */
+.sr-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- Catalogue ---------- */
+
+.book-grid {
+    align-items: stretch;
+}
+
+.book-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+.book-title {
+    font-size: 15px;
+    margin: 4px 0 0;
+}
+
+.book-author {
+    font-size: 13px;
+    margin: 0;
+}
+
+.book-card .dl {
+    margin-top: 8px;
+}
+
+.book-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+/* ---------- Pagination ---------- */
+
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 0 0;
+}
+
+.pager .btn-secondary {
+    width: auto;
+}
+
+.pager .hint {
+    font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Alerts and empty states ---------- */

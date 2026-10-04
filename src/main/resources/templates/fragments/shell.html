@@ -1,27 +1,46 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
-<!-- Sidebar shown on every authenticated page. -->
+<!--
+  Sidebar shown on every authenticated page.
+
+  Which links appear is decided by role, matching the access rules in
+  SecurityConfig rather than repeating them here: a member is never shown a
+  desk link they would only be refused, and an administrator never has to go
+  looking for the settings.
+-->
 <aside th:fragment="sidebar" class="sidebar">
     <a th:href="@{/dashboard}" class="brand">
         <span class="brand-mark" aria-hidden="true">LM</span>
-        <span>Leave Manager</span>
+        <span>Library Manager</span>
     </a>
 
     <nav class="nav" aria-label="Main">
         <!-- th:classappend evaluates a bare expression, so the whole ternary sits
              inside one pair of ${...} delimiters. -->
         <a th:href="@{/dashboard}" th:classappend="${currentPath == '/dashboard' ? 'active' : ''}">Dashboard</a>
-        <a th:href="@{/requests}" th:classappend="${currentPath.startsWith('/requests') ? 'active' : ''}">My leave</a>
-        <a th:href="@{/requests/new}" th:classappend="${currentPath == '/requests/new' ? 'active' : ''}">Request leave</a>
+        <a th:href="@{/catalog}" th:classappend="${currentPath.startsWith('/catalog') or currentPath.startsWith('/books') ? 'active' : ''}">Catalogue</a>
 
-        <div th:if="${#authorization.expression('hasRole(''HR'')')}" class="nav-section">
+        <div th:if="${#authorization.expression('hasAnyRole(''ADMIN'',''LIBRARIAN'')')}" class="nav-section">
+            <span class="nav-heading">Issue desk</span>
+            <a th:href="@{/desk}" th:classappend="${currentPath == '/desk' ? 'active' : ''}">Lend a book</a>
+            <a th:href="@{/desk/requests}" th:classappend="${currentPath.startsWith('/desk/requests') ? 'active' : ''}">Requests</a>
+            <a th:href="@{/desk/loans}" th:classappend="${currentPath == '/desk/loans' ? 'active' : ''}">Loans</a>
+            <a th:href="@{/desk/fines}" th:classappend="${currentPath == '/desk/fines' ? 'active' : ''}">Fines</a>
+            <a th:href="@{/desk/books}" th:classappend="${currentPath.startsWith('/desk/books') ? 'active' : ''}">Edit catalogue</a>
+            <a th:href="@{/desk/members}" th:classappend="${currentPath == '/desk/members' ? 'active' : ''}">Members</a>
+        </div>
+
+        <div th:if="${#authorization.expression('hasRole(''ADMIN'')')}" class="nav-section">
             <span class="nav-heading">Administration</span>
-            <a th:href="@{/admin/requests}" th:classappend="${currentPath.startsWith('/admin/requests') ? 'active' : ''}">Approvals</a>
-            <a th:href="@{/admin/employees}" th:classappend="${currentPath == '/admin/employees' ? 'active' : ''}">Employees</a>
-            <a th:href="@{/admin/leave-types}" th:classappend="${currentPath == '/admin/leave-types' ? 'active' : ''}">Leave types</a>
-            <a th:href="@{/admin/balances}" th:classappend="${currentPath == '/admin/balances' ? 'active' : ''}">Balances</a>
+            <a th:href="@{/admin/accounts}" th:classappend="${currentPath == '/admin/accounts' ? 'active' : ''}">Accounts</a>
+            <a th:href="@{/admin/categories}" th:classappend="${currentPath == '/admin/categories' ? 'active' : ''}">Categories</a>
             <a th:href="@{/admin/audit}" th:classappend="${currentPath == '/admin/audit' ? 'active' : ''}">Activity</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-heading">Account</span>
+            <a th:href="@{/account/password}" th:classappend="${currentPath == '/account/password' ? 'active' : ''}">Change password</a>
         </div>
     </nav>
 
@@ -29,7 +48,12 @@
         <span class="avatar" th:text="${me.initials()}">?</span>
         <div class="user-meta">
             <span class="user-name" th:text="${me.name()}">Signed in</span>
-            <span class="user-role" th:text="${me.role() == T(com.company.leavemanager.domain.Role).HR} ? 'HR' : 'Employee'">Role</span>
+            <!-- The whole ternary has to sit inside one pair of ${...}; with the
+                 delimiters around only the comparison, Thymeleaf would render the
+                 chosen word as literal text after the evaluated expression. -->
+            <span class="user-role"
+                  th:text="${me.role() == T(com.company.librarymanager.domain.Role).ADMIN ? 'Administrator'
+                          : (me.role() == T(com.company.librarymanager.domain.Role).LIBRARIAN ? 'Librarian' : 'Member')}">Role</span>
         </div>
     </div>
 
@@ -42,5 +66,33 @@
 <div th:fragment="alert(message, kind)" th:if="${message}"
      th:classappend="${kind == 'error' ? 'alert-error' : 'alert-success'}"
      th:text="${message}" role="alert"></div>
+
+<!--
+  Previous/next links for a paged list.
+
+  The caller builds both hrefs itself, because only it knows which filters are
+  currently applied and a pager that rebuilt the URL would drop them. Either
+  href may be null, meaning there is no page that way; nothing is rendered at
+  all for a single-page list.
+-->
+<nav th:fragment="pager(page, prevHref, nextHref)"
+     th:if="${page != null and (prevHref != null or nextHref != null)}"
+     class="pager" aria-label="Pagination">
+    <a th:if="${prevHref}" class="btn-secondary btn-sm" th:href="${prevHref}" rel="prev">Previous</a>
+    <span class="hint" th:text="'Page ' + ${page + 1}">Page 1</span>
+    <a th:if="${nextHref}" class="btn-secondary btn-sm" th:href="${nextHref}" rel="next">Next</a>
+</nav>
+
+<!--
+  A message that came back on the query string after a redirect.
+
+  Controllers report failures as ?error= and successes as a named flag, so each
+  caller passes the text it wants shown and the kind that goes with it.
+-->
+<div th:fragment="flash(error, info, success)" th:remove="tag">
+    <div th:if="${error}" class="alert-error" role="alert" th:text="${error}" data-testid="form-error"></div>
+    <div th:if="${info}" class="alert-info" role="status" th:text="${info}"></div>
+    <div th:if="${success}" class="alert-success" role="status" th:text="${success}"></div>
+</div>
 
 </html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Requests')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Requests</h1>
+                    <p class="lede">
+                        <span th:text="${pendingCount} + ' waiting'">0 waiting</span>
+                    </p>
+                </div>
+                <div class="row">
+                    <a class="btn-secondary" th:href="@{/desk}">Lend a book</a>
+                    <a class="btn-secondary" th:href="@{/desk/loans}">Loans</a>
+                </div>
+            </header>
+
+            <!-- A decision comes back as a named flag, a refusal as ?error=. -->
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.approved}" class="alert-success" role="status">
+                Request granted and the loan recorded
+                <span th:if="${param.due}">
+                    — <span th:text="'due ' + ${param.due}">due then</span>
+                </span>.
+            </div>
+            <div th:if="${param.rejected}" class="alert-success" role="status">
+                Request turned down. The member can see your reason.
+            </div>
+
+            <section class="grid grid-3" aria-label="Counters">
+                <div class="stat">
+                    <div class="stat-label">Waiting</div>
+                    <div class="stat-value" th:classappend="${pendingCount > 0 ? 'amber' : ''}"
+                         th:text="${pendingCount}">0</div>
+                    <div class="hint">Oldest first</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Granted</div>
+                    <div class="stat-value" th:text="${approvedCount}">0</div>
+                    <div class="hint">Became a loan</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Turned down</div>
+                    <div class="stat-value" th:text="${rejectedCount}">0</div>
+                    <div class="hint">With a reason given</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="spread">
+                    <h2>Waiting to be decided</h2>
+                    <a class="btn-secondary btn-sm" th:href="@{/catalog}">Catalogue</a>
+                </div>
+
+                <div th:if="${#lists.isEmpty(pending)}" class="empty">
+                    Nothing is waiting. Requests from members appear here.
+                </div>
+
+                <div th:unless="${#lists.isEmpty(pending)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Asked</th>
+                            <th>Title</th>
+                            <th>Member</th>
+                            <th>Why</th>
+                            <th>Decision</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="request : ${pending}">
+                            <td class="tnum" th:text="${fmt.timestamp(request.createdAt)}">When</td>
+                            <td>
+                                <a th:href="@{/books/{id}(id=${request.book.id})}"
+                                   th:text="${request.book.title}">Title</a>
+                                <div class="hint" th:text="${fmt.availability(request.book)}">Availability</div>
+                            </td>
+                            <td>
+                                <span th:text="${fmt.memberName(request.member)}">Member</span>
+                                <div class="hint tnum" th:text="${request.member.memberId}">LIB-0001</div>
+                            </td>
+                            <td>
+                                <span th:if="${request.note}" th:text="${request.note}">Why</span>
+                                <span th:unless="${request.note}" class="muted">—</span>
+                            </td>
+                            <td class="cell-actions">
+                                <!--
+                                  Approving issues the loan straight away and takes a
+                                  copy off the shelf, so it reuses the desk's own
+                                  due-date default. If nothing is on the shelf the
+                                  request is left waiting and the reason comes back
+                                  above; nothing is half-approved here.
+                                -->
+                                <form th:action="@{/desk/requests/{id}/approve(id=${request.id})}"
+                                      method="post" class="issue-form">
+                                    <div class="issue-fields">
+                                        <input type="hidden" name="note" th:value="${request.note}">
+                                        <div>
+                                            <label class="label" th:for="'due-' + ${request.id}">Due back</label>
+                                            <input class="field" type="date"
+                                                   th:id="'due-' + ${request.id}" name="dueDate"
+                                                   th:value="${defaultDueDate}" required>
+                                        </div>
+                                    </div>
+                                    <button class="btn-approve btn-sm" type="submit">Grant it</button>
+                                </form>
+                                <form th:action="@{/desk/requests/{id}/reject(id=${request.id})}"
+                                      method="post" class="inline-form">
+                                    <input class="field" name="reason" maxlength="500" required
+                                           placeholder="Why you are turning it down"
+                                           style="min-width:220px">
+                                    <button class="btn-reject btn-sm" type="submit">Turn down</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav th:replace="~{fragments/shell :: pager(
+                        ${page},
+                        ${page > 0} ? @{/desk/requests(page=${page - 1})} : null,
+                        ${hasNext} ? @{/desk/requests(page=${page + 1})} : null)}"></nav>
+            </section>
+
+            <!--
+              What the desk just decided. Without it, a librarian picking up the
+              queue has no way to tell a request already dealt with from one that
+              was simply missed.
+            -->
+            <section class="card">
+                <h2>Just decided</h2>
+                <div th:if="${#lists.isEmpty(decided)}" class="empty">Nothing decided yet.</div>
+                <div th:unless="${#lists.isEmpty(decided)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Decided</th>
+                            <th>Title</th>
+                            <th>Member</th>
+                            <th>Outcome</th>
+                            <th>By</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="request : ${decided}">
+                            <td class="tnum" th:text="${fmt.timestamp(request.decidedAt)}">When</td>
+                            <td th:text="${request.book.title}">Title</td>
+                            <td th:text="${fmt.memberName(request.member)}">Member</td>
+                            <td>
+                                <span th:class="${fmt.requestStatusClass(request.status)}"
+                                      th:text="${fmt.requestStatus(request.status)}">Outcome</span>
+                                <div class="hint" th:if="${request.decisionNote}"
+                                     th:text="${request.decisionNote}">Reason</div>
+                                <a th:if="${request.issue != null}" class="hint"
+                                   th:href="@{/desk/loans(q=${request.book.title})}">See the loan</a>
+                            </td>
+                            <td th:text="${request.decidedBy != null} ? ${request.decidedBy.name} : '—'">Who</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

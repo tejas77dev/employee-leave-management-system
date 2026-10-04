@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${editing} ? 'Edit title' : 'Add a title')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow"><a th:href="@{/desk/books}">Edit catalogue</a></p>
+                    <h1 th:text="${editing} ? 'Edit title' : 'Add a title'">Add a title</h1>
+                    <p class="lede" th:if="${editing}" th:text="${book.title}">Title</p>
+                </div>
+            </header>
+
+            <!--
+              A rejected save re-renders this page rather than redirecting, so the
+              fields that were already typed survive. Anything unexpected is
+              reported without its detail, so an internal failure never leaks
+              database text to the librarian.
+
+              Field values come from ${form} after a rejection and from ${book}
+              when editing, which is why every input picks between the two. The
+              form is a record, so its components are read as method calls
+              (form.title()) rather than as properties.
+            -->
+            <div th:if="${error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${error}">That book could not be saved.</div>
+
+            <section class="card" style="max-width:720px">
+                <form th:action="@{/desk/books/save}" method="post" novalidate>
+
+                    <!-- Only sent when editing, so an absent id creates rather
+                         than updates. -->
+                    <input th:if="${editing}" type="hidden" name="id" th:value="${book.id}">
+
+                    <label class="label" for="title">Title</label>
+                    <input class="field" id="title" name="title" maxlength="255" required
+                           th:value="${form != null ? form.title() : (book != null ? book.title : '')}">
+                    <div class="field-error"
+                         th:if="${fieldErrors != null and fieldErrors.containsKey('title')}"
+                         th:text="${fieldErrors.get('title')}">Required</div>
+
+                    <label class="label" for="author">Author</label>
+                    <input class="field" id="author" name="author" maxlength="255" required
+                           th:value="${form != null ? form.author() : (book != null ? book.author : '')}">
+                    <div class="field-error"
+                         th:if="${fieldErrors != null and fieldErrors.containsKey('author')}"
+                         th:text="${fieldErrors.get('author')}">Required</div>
+
+                    <div class="grid grid-2">
+                        <div>
+                            <label class="label" for="isbn">ISBN</label>
+                            <input class="field" id="isbn" name="isbn" maxlength="20"
+                                   th:value="${form != null ? form.isbn() : (book != null ? book.isbn : '')}">
+                            <div class="field-error"
+                                 th:if="${fieldErrors != null and fieldErrors.containsKey('isbn')}"
+                                 th:text="${fieldErrors.get('isbn')}">Invalid</div>
+                        </div>
+                        <div>
+                            <label class="label" for="categoryId">Category</label>
+                            <select class="field" id="categoryId" name="categoryId">
+                                <option value="">Uncategorised</option>
+                                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                                        th:selected="${c.id == (form != null ? form.categoryId()
+                                                            : (book != null and book.category != null ? book.category.id : null))}">
+                                    Category</option>
+                            </select>
+                            <div class="field-error"
+                                 th:if="${fieldErrors != null and fieldErrors.containsKey('categoryId')}"
+                                 th:text="${fieldErrors.get('categoryId')}">Unknown category</div>
+                        </div>
+                    </div>
+
+                    <label class="label" for="publisher">Publisher</label>
+                    <input class="field" id="publisher" name="publisher" maxlength="255"
+                           th:value="${form != null ? form.publisher() : (book != null ? book.publisher : '')}">
+
+                    <div class="grid grid-3">
+                        <div>
+                            <label class="label" for="totalCopies">Copies</label>
+                            <input class="field" type="number" min="0" max="999" id="totalCopies"
+                                   name="totalCopies" required
+                                   th:value="${form != null ? form.totalCopies()
+                                            : (book != null ? book.totalCopies : '1')}">
+                            <div class="field-error"
+                                 th:if="${fieldErrors != null and fieldErrors.containsKey('totalCopies')}"
+                                 th:text="${fieldErrors.get('totalCopies')}">Whole number</div>
+                        </div>
+                        <div>
+                            <label class="label" for="publishedYear">Year</label>
+                            <input class="field" type="number" min="1000" max="2999" id="publishedYear"
+                                   name="publishedYear"
+                                   th:value="${form != null ? form.publishedYear()
+                                            : (book != null ? book.publishedYear : '')}">
+                            <div class="field-error"
+                                 th:if="${fieldErrors != null and fieldErrors.containsKey('publishedYear')}"
+                                 th:text="${fieldErrors.get('publishedYear')}">Not a year</div>
+                        </div>
+                        <div>
+                            <label class="label" for="rackNo">Shelf</label>
+                            <input class="field" id="rackNo" name="rackNo" maxlength="50" placeholder="A1"
+                                   th:value="${form != null ? form.rackNo() : (book != null ? book.rackNo : '')}">
+                        </div>
+                    </div>
+
+                    <p class="hint">
+                        Copies already on loan cannot be taken off the shelf, so the total can only be
+                        lowered to what is actually in the building.
+                    </p>
+
+                    <button class="btn-primary" type="submit"
+                            th:text="${editing} ? 'Save changes' : 'Add to catalogue'">Save</button>
+                </form>
+            </section>
+
+            <p><a th:href="@{/desk/books}">Back to the catalogue</a></p>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

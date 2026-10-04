@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Catalogue')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Catalogue</p>
+                    <h1>Browse titles</h1>
+                    <p class="lede" th:text="${total} + (${total} == 1 ? ' title matches' : ' titles match')">0 titles</p>
+                </div>
+            </header>
+
+            <section class="card">
+                <form method="get" th:action="@{/catalog}" class="filters">
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}"
+                               placeholder="Title, author or ISBN">
+                    </div>
+                    <div>
+                        <label class="label" for="category">Category</label>
+                        <select class="field" id="category" name="category">
+                            <option value="">All categories</option>
+                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                                    th:selected="${category != null and category == c.id}">Category</option>
+                        </select>
+                    </div>
+                    <button class="btn-secondary" type="submit">Search</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/catalog}">Reset</a>
+                </form>
+            </section>
+
+            <div th:if="${#lists.isEmpty(books)}" class="empty">
+                Nothing matches that search. Try fewer words, or clear the filters.
+            </div>
+
+            <section th:unless="${#lists.isEmpty(books)}" class="grid grid-3 book-grid">
+                <article th:each="book : ${books}" class="card book-card">
+                    <div class="spread">
+                        <span class="badge badge-muted" th:text="${fmt.categoryName(book)}">Category</span>
+                        <span th:if="${fmt.availabilityTone(book) != ''}"
+                              th:classappend="${fmt.availabilityTone(book)}"
+                              th:text="${fmt.availability(book)}">Availability</span>
+                    </div>
+
+                    <h2 class="book-title">
+                        <a th:href="@{/books/{id}(id=${book.id})}" th:text="${book.title}">Title</a>
+                    </h2>
+                    <p class="muted book-author" th:text="${book.author}">Author</p>
+
+                    <dl class="dl">
+                        <div>
+                            <dt>Rack</dt>
+                            <dd th:text="${book.rackNo} ?: '—'">A1</dd>
+                        </div>
+                        <div>
+                            <dt>Year</dt>
+                            <dd th:text="${book.publishedYear} ?: '—'">2000</dd>
+                        </div>
+                        <div>
+                            <dt>Copies</dt>
+                            <dd th:text="${book.totalCopies}">3</dd>
+                        </div>
+                    </dl>
+
+                    <div class="book-foot">
+                        <span class="meta-chip" th:text="${book.isbn}">ISBN</span>
+                        <a th:href="@{/books/{id}(id=${book.id})}">Details</a>
+                    </div>
+                </article>
+            </section>
+
+            <nav th:replace="~{fragments/shell :: pager(
+                    ${page},
+                    ${page > 0} ? @{/catalog(q=${query}, category=${category}, page=${page - 1})} : null,
+                    ${hasNext} ? @{/catalog(q=${query}, category=${category}, page=${page + 1})} : null)}"></nav>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

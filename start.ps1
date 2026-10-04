@@ -1,4 +1,8 @@
- = 'C:\Users\TEJAS\.jdks\jdk-21.0.12.1+1'
- =  + '\bin;' + C:\Python314\Scripts\;C:\Python314\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\MinGW\bin;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\GitHub CLI\;C:\Users\TEJAS\.tools\apache-maven-3.9.9\bin;C:\Program Files\MySQL\MySQL Shell 8.0\bin\;C:\Users\TEJAS\AppData\Local\Microsoft\WindowsApps;C:\Users\TEJAS\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\TEJAS\AppData\Local\Programs\Antigravity\bin;C:\Users\TEJAS\AppData\Roaming\npm;C:\Program Files\GitHub CLI;C:\Program Files\MySQL\MySQL Server 8.0\bin;
-C:\Python314\Scripts\;C:\Python314\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\MinGW\bin;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\GitHub CLI\;C:\Users\TEJAS\.tools\apache-maven-3.9.9\bin;C:\Program Files\MySQL\MySQL Shell 8.0\bin\;C:\Users\TEJAS\AppData\Local\Microsoft\WindowsApps;C:\Users\TEJAS\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\TEJAS\AppData\Local\Programs\Antigravity\bin;C:\Users\TEJAS\AppData\Roaming\npm;C:\Program Files\GitHub CLI;C:\Program Files\MySQL\MySQL Server 8.0\bin; = 
-Start-Process -NoNewWindow -FilePath "\bin\java.exe" -ArgumentList '-jar', (Join-Path  'target\leave-manager-1.0.0.jar')
+$env:JAVA_HOME = 'C:\Users\TEJAS\.jdks\jdk-21.0.12.1+1'
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+
+# The library manager. Listens on 8081; the leave manager in a sibling directory
+# runs on 8080 and is left alone. For a restart that tracks its own process,
+# use .\restart.ps1 instead of this.
+Start-Process -NoNewWindow -FilePath "$env:JAVA_HOME\bin\java.exe" `
+    -ArgumentList '-jar', (Join-Path $PSScriptRoot 'target\library-manager-1.0.0.jar')

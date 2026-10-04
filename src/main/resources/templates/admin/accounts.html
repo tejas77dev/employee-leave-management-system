@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Accounts')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Administration</p>
+                    <h1>Accounts</h1>
+                    <p class="lede">Who can sign in, and what they are allowed to do.</p>
+                </div>
+            </header>
+
+            <section class="grid grid-4" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Accounts</div>
+                    <div class="stat-value" th:text="${totalAccounts}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value" th:text="${activeCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Administrators</div>
+                    <div class="stat-value" th:text="${adminCount}">0</div>
+                    <div class="hint">The last one cannot be demoted</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Library members</div>
+                    <div class="stat-value" th:text="${memberCount}">0</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.created}" class="alert-success" role="status">Account created.</div>
+            <div th:if="${param.updated}" class="alert-success" role="status">Account updated.</div>
+            <div th:if="${param.reset}" class="alert-success" role="status">Password reset.</div>
+
+            <section class="card">
+                <h2>Create an account</h2>
+                <form th:action="@{/admin/accounts/create}" method="post" class="member-form">
+                    <div class="grid grid-4">
+                        <div>
+                            <label class="label" for="a-name">Name</label>
+                            <input class="field" id="a-name" name="name" maxlength="191" required>
+                        </div>
+                        <div>
+                            <label class="label" for="a-email">Email</label>
+                            <input class="field" type="email" id="a-email" name="email" required>
+                        </div>
+                        <div>
+                            <label class="label" for="a-password">Password</label>
+                            <input class="field" type="password" id="a-password" name="password"
+                                   minlength="8" autocomplete="new-password" required>
+                        </div>
+                        <div>
+                            <label class="label" for="a-role">Role</label>
+                            <select class="field" id="a-role" name="role">
+                                <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">Role</option>
+                            </select>
+                            <div class="hint">A sign-in with no member card can only browse</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" type="submit">Create account</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <form method="get" th:action="@{/admin/accounts}" class="filters">
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}" placeholder="Name or email">
+                    </div>
+                    <button class="btn-secondary" type="submit">Search</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/admin/accounts}">Reset</a>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(accounts)}" class="empty">No accounts match that search.</div>
+
+                <div th:unless="${#lists.isEmpty(accounts)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Books out</th>
+                            <th>State</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="account : ${accounts}">
+                            <td>
+                                <span th:text="${account.name}">Name</span>
+                                <!-- Marking your own row keeps an administrator from
+                                     reading the controls below as applying to someone
+                                     else. -->
+                                <span th:if="${account.id == isSelf}" class="badge badge-self">You</span>
+                            </td>
+                            <td class="hint" th:text="${account.email}">Email</td>
+                            <td><span class="badge badge-muted" th:text="${account.role}">Role</span></td>
+                            <td class="tnum">
+                                <span th:if="${loanCounts.containsKey(account.id)}"
+                                      th:text="${loanCounts.get(account.id)}">0</span>
+                                <span th:unless="${loanCounts.containsKey(account.id)}" class="muted">—</span>
+                            </td>
+                            <td>
+                                <span th:if="${account.active}" class="badge badge-approved">Active</span>
+                                <span th:unless="${account.active}" class="badge badge-muted">Disabled</span>
+                            </td>
+                            <td class="cell-actions">
+                                <form th:action="@{/admin/accounts/update}" method="post" class="row-form">
+                                    <input type="hidden" name="userId" th:value="${account.id}">
+                                    <input class="field field-inline" name="name" th:value="${account.name}"
+                                           maxlength="191" aria-label="Name">
+                                    <select class="field field-inline" name="role" aria-label="Role">
+                                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"
+                                                th:selected="${r == account.role}">Role</option>
+                                    </select>
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" name="active" value="true"
+                                               th:checked="${account.active}">
+                                        <span>Active</span>
+                                    </label>
+                                    <button class="btn-secondary btn-sm" type="submit">Save</button>
+                                </form>
+
+                                <form th:action="@{/admin/accounts/{id}/reset-password(id=${account.id})}"
+                                      method="post" class="inline-form">
+                                    <input class="field field-inline" type="password" name="newPassword"
+                                           minlength="8" placeholder="New password" autocomplete="new-password"
+                                           aria-label="New password">
+                                    <button class="btn-secondary btn-sm" type="submit">Reset</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="hint">
+                    The last active administrator cannot be demoted or disabled: doing so would leave
+                    nobody able to undo it. Requests that would do so are refused by the service, not
+                    just hidden in this page.
+                </p>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>

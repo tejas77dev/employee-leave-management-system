@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Edit catalogue')}"></head>
+<body>
+<div class="app-shell">
+    <aside th:replace="~{fragments/shell :: sidebar}"></aside>
+
+    <div class="app-main">
+        <main class="app-main-inner">
+
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Issue desk</p>
+                    <h1>Edit catalogue</h1>
+                    <p class="lede">Retired titles are listed too, so they can be found and put back.</p>
+                </div>
+                <a class="btn-primary" style="width:auto;margin-top:0" th:href="@{/desk/books/new}">Add a title</a>
+            </header>
+
+            <section class="grid grid-3" aria-label="Summary">
+                <div class="stat">
+                    <div class="stat-label">Titles in circulation</div>
+                    <div class="stat-value" th:text="${titleCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">With a copy on the shelf</div>
+                    <div class="stat-value" th:text="${availableCount}">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Matching these filters</div>
+                    <div class="stat-value" th:text="${total}">0</div>
+                </div>
+            </section>
+
+            <div th:if="${param.error}" class="alert-error" role="alert" data-testid="form-error"
+                 th:text="${param.error}">Something went wrong.</div>
+            <div th:if="${param.saved}" class="alert-success" role="status">Title saved.</div>
+            <div th:if="${param.retired}" class="alert-info" role="status">Title retired from the catalogue.</div>
+            <div th:if="${param.restored}" class="alert-success" role="status">Title back in circulation.</div>
+
+            <section class="card">
+                <form method="get" th:action="@{/desk/books}" class="filters">
+                    <div>
+                        <label class="label" for="q">Search</label>
+                        <input class="field" id="q" name="q" th:value="${query}"
+                               placeholder="Title, author or ISBN">
+                    </div>
+                    <div>
+                        <label class="label" for="category">Category</label>
+                        <select class="field" id="category" name="category">
+                            <option value="">All categories</option>
+                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                                    th:selected="${category != null and category == c.id}">Category</option>
+                        </select>
+                    </div>
+                    <button class="btn-secondary" type="submit">Apply</button>
+                    <a class="btn-ghost btn-secondary" style="width:auto" th:href="@{/desk/books}">Reset</a>
+                </form>
+            </section>
+
+            <section class="card">
+                <div th:if="${#lists.isEmpty(books)}" class="empty">No titles match those filters.</div>
+
+                <div th:unless="${#lists.isEmpty(books)}" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Copies</th>
+                            <th>Shelf</th>
+                            <th>State</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="book : ${books}">
+                            <td>
+                                <a th:href="@{/books/{id}(id=${book.id})}" th:text="${book.title}">Title</a>
+                                <div class="hint" th:text="${book.author}">Author</div>
+                                <div class="hint meta-chip" th:text="${book.isbn}">ISBN</div>
+                            </td>
+                            <td th:text="${fmt.categoryName(book)}">Category</td>
+                            <td class="tnum">
+                                <span th:text="${book.totalCopies}">0</span>
+                                <div class="hint" th:text="${fmt.availability(book)}">Availability</div>
+                            </td>
+                            <td class="tnum" th:text="${book.rackNo} ?: '—'">A1</td>
+                            <td>
+                                <span th:if="${book.active}" class="badge badge-approved">In circulation</span>
+                                <span th:unless="${book.active}" class="badge badge-muted">Retired</span>
+                            </td>
+                            <td class="cell-actions">
+                                <a class="btn-secondary btn-sm" th:href="@{/desk/books/{id}/edit(id=${book.id})}">Edit</a>
+                                <!-- Retire and restore are separate posts rather than one
+                                     toggle, so a stale page cannot put a title back into
+                                     circulation by resubmitting an old button. -->
+                                <form th:if="${book.active}" th:action="@{/desk/books/{id}/retire(id=${book.id})}"
+                                      method="post" class="inline-form">
+                                    <button class="btn-secondary btn-sm" type="submit">Retire</button>
+                                </form>
+                                <form th:unless="${book.active}" th:action="@{/desk/books/{id}/restore(id=${book.id})}"
+                                      method="post" class="inline-form">
+                                    <button class="btn-approve btn-sm" type="submit">Restore</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav th:replace="~{fragments/shell :: pager(
+                        ${page},
+                        ${page > 0} ? @{/desk/books(q=${query}, category=${category}, page=${page - 1})} : null,
+                        ${hasNext} ? @{/desk/books(q=${query}, category=${category}, page=${page + 1})} : null)}"></nav>
+            </section>
+
+        </main>
+    </div>
+</div>
+</body>
+</html>
